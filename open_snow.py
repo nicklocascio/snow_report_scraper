@@ -62,25 +62,35 @@ def parse_data(response):
     '''
 
     forecast_data = {}
+    report_data = {}
 
     html = BeautifulSoup(response, 'html.parser')
     resorts = html.find_all("div", class_="compare-sort")
     for resort in resorts:
         name = resort.find("div", class_="title-location")
 
-        snow = resort.find("div", class_="text snow")
-        if(snow):
-            forecast_data[name.string.strip()] = snow.string.strip()
-        else:
-            snow = resort.find("div", class_="text highsnow")
-            if(snow):
-                forecast_data[name.string.strip()] = snow.string.strip()
-            else:
-                snow = resort.find("div", class_="text nosnow")
-                forecast_data[name.string.strip()] = snow.string.strip()
-    
+        # Get forecast data
+        snow_f = resort.find("div", class_=re.compile("text .*"))
+        forecast_data[name.string.strip()] = snow_f.string.strip()
+
+        # Get report data
+        snow_r = resort.find("div", class_=re.compile("summary-data-value .*"))
+        try:
+            report_data[name.string.strip()] = snow_r.string.strip()
+        except AttributeError:
+            continue
+   
+    # Display data
+    print("\nForecasts:\n")
     for key, value in forecast_data.items():
-        print(f'{key}: {value}')
+        print(f'{key:>30}: {value:>5}')
+    print("\nReports:\n")
+    for key, value in report_data.items():
+        print(f'{key:>30}: {value:>5}')
+
+def add_item(data_dict, key, value):
+    data_dict[key.string.strip()] = value.string.strip()
+    return data_dict
 
 def main():
     # Parse command line arguments
@@ -99,9 +109,7 @@ def main():
                 usage(1)
 
     if state:
-        print(state)
-        response = get_response(state)
-        parse_data(response)
+        parse_data(get_response(state))
     else:
         usage(1)
 
